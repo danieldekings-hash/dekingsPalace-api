@@ -1,0 +1,379 @@
+{
+	"info": {
+		"_postman_id": "dekingspalace-api-collection",
+		"name": "DeKingsPalace API",
+		"description": "Investment Platform API - Authentication, Investments, and Webhooks",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('auth_token', response.token);",
+									"    pm.environment.set('user_email', pm.request.body.raw ? JSON.parse(pm.request.body.raw).email : '');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phoneNumber\": \"+1234567890\",\n  \"password\": \"SecurePassword123!\",\n  \"confirmPassword\": \"SecurePassword123!\",\n  \"referralCode\": \"\",\n  \"role\": \"investor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user. Role can be 'investor' or 'admin' (defaults to 'investor')."
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('auth_token', response.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with email and password. Returns JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "Register Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('admin_token', response.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Admin User\",\n  \"email\": \"admin@dekingspalace.com\",\n  \"phoneNumber\": \"+1987654321\",\n  \"password\": \"AdminPassword123!\",\n  \"confirmPassword\": \"AdminPassword123!\",\n  \"referralCode\": \"\",\n  \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register an admin user for testing."
+					},
+					"response": []
+				}
+			],
+			"description": "User authentication endpoints - register and login"
+		},
+		{
+			"name": "Investments",
+			"item": [
+				{
+					"name": "Create Investment - BTC",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('investment_id', response.investmentId);",
+									"    pm.environment.set('payment_reference', response.reference);",
+									"    pm.environment.set('deposit_address', response.depositAddress);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan\": \"Gold Plan\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							]
+						},
+						"description": "Create a new investment with Bitcoin. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Investment - ETH",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan\": \"Platinum Plan\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							]
+						},
+						"description": "Create a new investment with Ethereum."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Investment - USDT",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan\": \"Silver Plan\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							]
+						},
+						"description": "Create a new investment with USDT."
+					},
+					"response": []
+				}
+			],
+			"description": "Investment management endpoints"
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Payment Confirmation - Success",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference\": \"{{payment_reference}}\",\n  \"txHash\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\n  \"confirmations\": 6,\n  \"status\": \"confirmed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/payment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhooks",
+								"payment"
+							]
+						},
+						"description": "Simulate a successful payment confirmation webhook. Use the reference from investment creation."
+					},
+					"response": []
+				},
+				{
+					"name": "Payment Confirmation - Failed",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference\": \"{{payment_reference}}\",\n  \"txHash\": \"0xfailed1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",\n  \"confirmations\": 0,\n  \"status\": \"failed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/payment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhooks",
+								"payment"
+							]
+						},
+						"description": "Simulate a failed payment webhook."
+					},
+					"response": []
+				}
+			],
+			"description": "Webhook endpoints for payment processing"
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Root Endpoint",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Check if the API is running."
+					},
+					"response": []
+				}
+			],
+			"description": "API health check endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5500",
+			"type": "string"
+		}
+	]
+}
