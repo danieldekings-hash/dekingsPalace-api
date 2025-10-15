@@ -19,8 +19,10 @@ const app = express();
 // Middleware
 app.use(helmet());
 
-// CORS configuration: allow local dev and configurable prod origins
+// CORS configuration: allow prod domains, local dev, and configurable extra origins
 const allowedOrigins: string[] = [
+  "https://www.dekingspalace.com",
+  "https://dekingspalace.com",
   "http://localhost:3000",
   // Support comma-separated list in ALLOWED_ORIGINS
   ...((process.env.ALLOWED_ORIGINS || "")
@@ -37,11 +39,14 @@ const corsOptions: CorsOptions = {
     return callback(isAllowed ? null : new Error("Not allowed by CORS"), isAllowed);
   },
   credentials: true,
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  maxAge: 86400,
 };
 
 app.use(cors(corsOptions));
+// Ensure preflight requests are handled for all routes
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
