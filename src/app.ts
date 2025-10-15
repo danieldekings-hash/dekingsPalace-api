@@ -46,7 +46,8 @@ const corsOptions: CorsOptions = {
 
 app.use(cors(corsOptions));
 // Ensure preflight requests are handled for all routes
-app.options("*", cors(corsOptions));
+// Use a RegExp to match all paths for OPTIONS so path-to-regexp doesn't parse a '*' token
+app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
