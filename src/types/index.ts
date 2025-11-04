@@ -2,7 +2,7 @@ import { Schema } from "mongoose";
 
 export interface CreateInvestmentDTO {
   userId: Schema.Types.ObjectId | string;
-  plan: string;
+  planId: string;
   amount: number;
   currency: string;
 }
@@ -26,6 +26,7 @@ export interface AuthResponse {
   status: number;
   message: string;
   token?: string;
+  refreshToken?: string;
   referralCode?: string;
   user?: {
     id: string;

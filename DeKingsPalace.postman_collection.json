@@ -138,6 +138,114 @@
 						"description": "Register an admin user for testing."
 					},
 					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{user_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{password_reset_token}}\",\n  \"newPassword\": \"NewPassword123!\",\n  \"confirmPassword\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						}
+					},
+					"response": []
 				}
 			],
 			"description": "User authentication endpoints - register and login"
@@ -175,10 +283,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"plan\": \"Gold Plan\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
-						},
+                    "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
+                        },
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -207,10 +315,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"plan\": \"Platinum Plan\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
-						},
+                    "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
+                        },
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -239,10 +347,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"plan\": \"Silver Plan\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
-						},
+                    "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
+                        },
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -259,6 +367,57 @@
 				}
 			],
 			"description": "Investment management endpoints"
+		},
+		{
+			"name": "Plans",
+			"item": [
+				{
+					"name": "List Active Plans",
+					"request": {"method": "GET", "header": [], "url": {"raw": "{{base_url}}/api/plans", "host": ["{{base_url}}"], "path": ["api","plans"]}},
+					"response": []
+				},
+				{
+					"name": "Create Plan (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+						],
+						"body": {"mode": "raw", "raw": "{\n  \"name\": \"Gold\",\n  \"tier\": \"Gold\",\n  \"minAmount\": 100,\n  \"maxAmount\": 10000,\n  \"percentage\": 2,\n  \"duration\": 30,\n  \"features\": [\"Daily ROI\"]\n}"},
+						"url": {"raw": "{{base_url}}/api/plans", "host": ["{{base_url}}"], "path": ["api","plans"]}
+					},
+					"response": []
+				}
+			],
+			"description": "Plan endpoints"
+		},
+		{
+			"name": "Wallet",
+			"item": [
+				{"name": "Get Wallet", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/wallet", "host": ["{{base_url}}"], "path": ["api","wallet"]}}, "response": []},
+				{"name": "Get Addresses", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/wallet/addresses", "host": ["{{base_url}}"], "path": ["api","wallet","addresses"]}}, "response": []},
+				{"name": "Create Deposit", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 100,\n  \"currency\": \"USDT\"\n}"}, "url": {"raw": "{{base_url}}/api/wallet/deposit", "host": ["{{base_url}}"], "path": ["api","wallet","deposit"]}}, "response": []},
+				{"name": "Request Withdrawal", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 50,\n  \"currency\": \"USDT\",\n  \"walletAddress\": \"USDT-ADDRESS\"\n}"}, "url": {"raw": "{{base_url}}/api/wallet/withdraw", "host": ["{{base_url}}"], "path": ["api","wallet","withdraw"]}}, "response": []}
+			],
+			"description": "Wallet endpoints"
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{"name": "List Transactions", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions?limit=10", "host": ["{{base_url}}"], "path": ["api","transactions"], "query": [{"key":"limit","value":"10"}]}}, "response": []},
+				{"name": "Export CSV", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/export", "host": ["{{base_url}}"], "path": ["api","transactions","export"]}}, "response": []}
+			],
+			"description": "Transaction endpoints"
+		},
+		{
+			"name": "Referrals",
+			"item": [
+				{"name": "Referral Info", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/referrals", "host": ["{{base_url}}"], "path": ["api","referrals"]}}, "response": []},
+				{"name": "Referral List", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/referrals/list", "host": ["{{base_url}}"], "path": ["api","referrals","list"]}}, "response": []},
+				{"name": "Referral Earnings", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/referrals/earnings", "host": ["{{base_url}}"], "path": ["api","referrals","earnings"]}}, "response": []}
+			],
+			"description": "Referral endpoints"
 		},
 		{
 			"name": "Webhooks",
