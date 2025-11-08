@@ -35,4 +35,3 @@ export async function withdraw(req: Request, res: Response) {
   }
 }
 
-

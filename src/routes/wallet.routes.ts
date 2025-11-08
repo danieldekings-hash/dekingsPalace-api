@@ -12,5 +12,3 @@ router.post("/deposit", authenticate, validateBody(depositSchema), controller.de
 router.post("/withdraw", authenticate, validateBody(withdrawSchema), controller.withdraw);
 
 export default router;
-
-

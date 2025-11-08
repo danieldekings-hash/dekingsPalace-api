@@ -16,10 +16,10 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"if (pm.response.code === 201 || pm.response.code === 200) {",
 									"    const response = pm.response.json();",
-									"    pm.environment.set('auth_token', response.token);",
 									"    pm.environment.set('user_email', pm.request.body.raw ? JSON.parse(pm.request.body.raw).email : '');",
+									"    pm.environment.set('referral_code', response.referralCode || '');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -49,7 +49,81 @@
 								"register"
 							]
 						},
-						"description": "Register a new user. Role can be 'investor' or 'admin' (defaults to 'investor')."
+						"description": "Register a new user. An OTP will be sent to the email address. You must verify the email before logging in. Role can be 'investor' or 'admin' (defaults to 'investor')."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.environment.set('auth_token', response.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{user_email}}\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/verify-email",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify-email"
+							]
+						},
+						"description": "Verify user email with OTP code received via email. Returns JWT token upon successful verification. OTP expires in 5 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Resend OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{user_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/resend-otp",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"resend-otp"
+							]
+						},
+						"description": "Resend OTP verification code to user's email. Use this if the OTP expired or wasn't received."
 					},
 					"response": []
 				},
@@ -92,7 +166,7 @@
 								"login"
 							]
 						},
-						"description": "Login with email and password. Returns JWT token."
+						"description": "Login with email and password. Returns JWT token. Email must be verified before login (use Verify Email endpoint after registration)."
 					},
 					"response": []
 				},
@@ -103,9 +177,9 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"if (pm.response.code === 201 || pm.response.code === 200) {",
 									"    const response = pm.response.json();",
-									"    pm.environment.set('admin_token', response.token);",
+									"    pm.environment.set('admin_email', pm.request.body.raw ? JSON.parse(pm.request.body.raw).email : '');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -135,7 +209,7 @@
 								"register"
 							]
 						},
-						"description": "Register an admin user for testing."
+						"description": "Register an admin user for testing. An OTP will be sent to the email. Verify email before login."
 					},
 					"response": []
 				},
@@ -248,13 +322,13 @@
 					"response": []
 				}
 			],
-			"description": "User authentication endpoints - register and login"
+			"description": "User authentication endpoints - register, verify email, resend OTP, and login"
 		},
 		{
 			"name": "Investments",
 			"item": [
 				{
-					"name": "Create Investment - BTC",
+					"name": "Create Investment - Gold Plan",
 					"event": [
 						{
 							"listen": "test",
@@ -262,9 +336,11 @@
 								"exec": [
 									"if (pm.response.code === 201) {",
 									"    const response = pm.response.json();",
-									"    pm.environment.set('investment_id', response.investmentId);",
-									"    pm.environment.set('payment_reference', response.reference);",
-									"    pm.environment.set('deposit_address', response.depositAddress);",
+									"    if (response.data) {",
+									"        pm.environment.set('investment_id', response.data.investmentId);",
+									"        pm.environment.set('payment_reference', response.data.reference);",
+									"        pm.environment.set('wallet_balance', response.data.walletBalance || 0);",
+									"    }",
 									"}"
 								],
 								"type": "text/javascript"
@@ -283,10 +359,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-                    "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
-                        },
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
+						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -297,12 +373,12 @@
 								"investments"
 							]
 						},
-						"description": "Create a new investment with Bitcoin. Requires authentication."
+						"description": "Create a new investment with Gold Plan ($101-$500, 10% monthly return). Amount is deducted from wallet balance. Plan options: bronze, silver, gold, platinum, diamond."
 					},
 					"response": []
 				},
 				{
-					"name": "Create Investment - ETH",
+					"name": "Create Investment - Platinum Plan",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -315,10 +391,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-                    "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
-                        },
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
+						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -329,12 +405,12 @@
 								"investments"
 							]
 						},
-						"description": "Create a new investment with Ethereum."
+						"description": "Create a new investment with Platinum Plan ($501-$5000, 15% monthly return). Amount is deducted from wallet balance."
 					},
 					"response": []
 				},
 				{
-					"name": "Create Investment - USDT",
+					"name": "Create Investment - Bronze Plan",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -347,10 +423,10 @@
 								"value": "Bearer {{auth_token}}"
 							}
 						],
-                    "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
-                        },
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
+						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
 							"host": [
@@ -361,12 +437,76 @@
 								"investments"
 							]
 						},
-						"description": "Create a new investment with USDT."
+						"description": "Create a new investment with Bronze Plan ($20-$50, 5% monthly return). Amount is deducted from wallet balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Investment - Silver Plan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan\": \"silver\",\n  \"amount\": 75,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							]
+						},
+						"description": "Create a new investment with Silver Plan ($51-$100, 8% monthly return). Amount is deducted from wallet balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Investment - Diamond Plan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan\": \"diamond\",\n  \"amount\": 10000,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							]
+						},
+						"description": "Create a new investment with Diamond Plan ($5001+, 20% monthly return). Amount is deducted from wallet balance."
 					},
 					"response": []
 				}
 			],
-			"description": "Investment management endpoints"
+			"description": "Investment management endpoints - Create investments from wallet balance. Investment plans: Bronze ($20-$50, 5%), Silver ($51-$100, 8%), Gold ($101-$500, 10%), Platinum ($501-$5000, 15%), Diamond ($5001+, 20%). Returns are calculated monthly."
 		},
 		{
 			"name": "Plans",
@@ -482,6 +622,151 @@
 				}
 			],
 			"description": "Webhook endpoints for payment processing"
+		},
+		{
+			"name": "Wallet",
+			"item": [
+				{
+					"name": "Manual Deposit - User Wallet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.walletBalance !== undefined) {",
+									"        pm.environment.set('wallet_balance', response.walletBalance);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1000,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/wallet/deposit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wallet",
+								"deposit"
+							]
+						},
+						"description": "Manually deposit funds into your wallet (for testing). Users deposit into their own wallet. Admins can specify userId to deposit into any wallet."
+					},
+					"response": []
+				},
+				{
+					"name": "Manual Deposit - Admin to User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.walletBalance !== undefined) {",
+									"        pm.environment.set('wallet_balance', response.walletBalance);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"amount\": 5000,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/wallet/deposit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wallet",
+								"deposit"
+							]
+						},
+						"description": "Admin endpoint to deposit funds into any user's wallet. Replace USER_ID_HERE with actual user ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Wallet Balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.walletBalance !== undefined) {",
+									"        pm.environment.set('wallet_balance', response.walletBalance);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/wallet/balance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wallet",
+								"balance"
+							]
+						},
+						"description": "Get your wallet balance. Users can only check their own balance. Admins can add ?userId=USER_ID to check any user's balance."
+					},
+					"response": []
+				}
+			],
+			"description": "Wallet management endpoints - Deposit funds and check balance. For testing purposes, manual deposits are immediately confirmed."
 		},
 		{
 			"name": "Health Check",

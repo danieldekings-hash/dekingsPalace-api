@@ -1,75 +1,127 @@
 import { Wallet, IWallet } from "../models/Wallet.model";
 import { Transaction } from "../models/Transaction.model";
 import { v4 as uuid } from "uuid";
+import mongoose from "mongoose";
 
-export async function getOrCreateWallet(userId: string): Promise<IWallet> {
-  let wallet = await Wallet.findOne({ userId });
+export async function getWallet(userId: string) {
+  let wallet = await Wallet.findOne({ userId }).lean();
   if (!wallet) {
-    wallet = await Wallet.create({ userId });
+    const newWallet = await Wallet.create({
+      userId,
+      balances: { BTC: 0, ETH: 0, USDT: 0 },
+      totalDeposited: { BTC: 0, ETH: 0, USDT: 0 },
+      totalWithdrawn: { BTC: 0, ETH: 0, USDT: 0 },
+    });
+    wallet = newWallet.toObject() as any;
   }
   return wallet;
 }
 
-export async function getWallet(userId: string) {
-  const wallet = await getOrCreateWallet(userId);
-  return wallet.toObject();
-}
-
 export async function getOrGenerateAddresses(userId: string) {
-  const wallet = await getOrCreateWallet(userId);
-  const addresses = { ...wallet.addresses } as { BTC?: string; ETH?: string; USDT?: string };
-  if (!addresses.BTC) addresses.BTC = `btc_${uuid().slice(0, 12)}`;
-  if (!addresses.ETH) addresses.ETH = `eth_${uuid().slice(0, 12)}`;
-  if (!addresses.USDT) addresses.USDT = `usdt_${uuid().slice(0, 12)}`;
-  wallet.addresses = addresses;
+  let wallet = await Wallet.findOne({ userId });
+  if (!wallet) {
+    wallet = await Wallet.create({
+      userId,
+      balances: { BTC: 0, ETH: 0, USDT: 0 },
+      totalDeposited: { BTC: 0, ETH: 0, USDT: 0 },
+      totalWithdrawn: { BTC: 0, ETH: 0, USDT: 0 },
+    });
+  }
+  if (!wallet.addresses.BTC) wallet.addresses.BTC = `btc_${uuid()}`;
+  if (!wallet.addresses.ETH) wallet.addresses.ETH = `eth_${uuid()}`;
+  if (!wallet.addresses.USDT) wallet.addresses.USDT = `usdt_${uuid()}`;
   await wallet.save();
-  return addresses;
+  return wallet.addresses;
 }
 
 export async function createDeposit(userId: string, amount: number, currency: string, transactionHash?: string) {
-  const wallet = await getOrCreateWallet(userId);
-  const address = wallet.addresses[currency as "BTC" | "ETH" | "USDT"];
-  if (!address) {
-    const addrs = await getOrGenerateAddresses(userId);
-    return createDeposit(userId, amount, currency, transactionHash);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    let wallet = await Wallet.findOne({ userId }).session(session);
+    if (!wallet) {
+      const newWallets = await Wallet.create(
+        [
+          {
+            userId,
+            balances: { BTC: 0, ETH: 0, USDT: 0 },
+            totalDeposited: { BTC: 0, ETH: 0, USDT: 0 },
+            totalWithdrawn: { BTC: 0, ETH: 0, USDT: 0 },
+          },
+        ],
+        { session }
+      );
+      wallet = newWallets[0] as any;
+    }
+    if (!wallet) {
+      throw new Error("Failed to create or find wallet");
+    }
+    const ref = `dep_${uuid()}`;
+    const tx = await Transaction.create(
+      [
+        {
+          userId,
+          type: "deposit",
+          amount,
+          currency: currency.toUpperCase(),
+          reference: ref,
+          status: transactionHash ? "pending" : "confirmed",
+          txHash: transactionHash,
+        },
+      ],
+      { session }
+    );
+    const curr = currency.toUpperCase() as "BTC" | "ETH" | "USDT";
+    wallet.balances[curr] += amount;
+    wallet.totalDeposited[curr] += amount;
+    await wallet.save({ session });
+    await session.commitTransaction();
+    return { reference: ref, transactionId: String(tx[0]._id) };
+  } catch (err: any) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
   }
-
-  const reference = `dep_${uuid()}`;
-  const tx = await Transaction.create({
-    userId,
-    type: "deposit",
-    amount,
-    currency,
-    address,
-    reference,
-    status: transactionHash ? "pending" : "waiting_payment",
-    txHash: transactionHash,
-  });
-  return { reference, address, transactionId: String(tx._id) };
 }
 
 export async function createWithdrawal(userId: string, amount: number, currency: string, walletAddress: string) {
-  const wallet = await getOrCreateWallet(userId);
-  const currentBalance = wallet.balances[currency as "BTC" | "ETH" | "USDT"] || 0;
-  if (amount > currentBalance) {
-    throw { status: 400, code: "INSUFFICIENT_BALANCE", message: "Insufficient balance" };
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const wallet = await Wallet.findOne({ userId }).session(session);
+    if (!wallet) throw new Error("Wallet not found");
+    const curr = currency.toUpperCase() as "BTC" | "ETH" | "USDT";
+    if (wallet.balances[curr] < amount) {
+      await session.abortTransaction();
+      const err: any = new Error("Insufficient balance");
+      err.code = "INSUFFICIENT_BALANCE";
+      throw err;
+    }
+    const ref = `with_${uuid()}`;
+    const tx = await Transaction.create(
+      [
+        {
+          userId,
+          type: "withdrawal",
+          amount,
+          currency: curr,
+          address: walletAddress,
+          reference: ref,
+          status: "pending",
+        },
+      ],
+      { session }
+    );
+    wallet.balances[curr] -= amount;
+    wallet.totalWithdrawn[curr] += amount;
+    await wallet.save({ session });
+    await session.commitTransaction();
+    return { reference: ref, transactionId: String(tx[0]._id) };
+  } catch (err: any) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
   }
-  // Deduct immediately (a real system may hold or use double-entry)
-  wallet.balances[currency as "BTC" | "ETH" | "USDT"] = currentBalance - amount;
-  wallet.totalWithdrawn[currency as "BTC" | "ETH" | "USDT"] += amount;
-  await wallet.save();
-
-  const reference = `wd_${uuid()}`;
-  const tx = await Transaction.create({
-    userId,
-    type: "withdrawal",
-    amount,
-    currency,
-    address: walletAddress,
-    reference,
-    status: "pending",
-  });
-  return { reference, transactionId: String(tx._id) };
 }
-
-

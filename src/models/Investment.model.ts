@@ -7,7 +7,7 @@ export interface IInvestment extends Document {
   status: "pending" | "active" | "completed" | "cancelled";
   startDate?: Date;
   endDate?: Date;
-  returns?: number;
+  returns?: number; // Monthly return amount (earned each month)
   createdAt: Date;
   updatedAt: Date;
 }

@@ -13,12 +13,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes";
 import investmentRoutes from "./routes/investment.routes";
 import webhookRoutes from "./routes/webhooks.routes";
-import planRoutes from "./routes/plans.routes";
 import walletRoutes from "./routes/wallet.routes";
-import transactionRoutes from "./routes/transactions.routes";
-import referralRoutes from "./routes/referrals.routes";
-import swaggerUi from "swagger-ui-express";
-import openapi from "./docs/openapi";
 
 dotenv.config();
 if (process.env.NODE_ENV !== "test") {
@@ -73,13 +68,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 app.use("/api/auth", authRoutes);
 app.use("/api/investments", investmentRoutes);
 app.use("/api/webhooks", webhookRoutes);
-app.use("/api/plans", planRoutes);
 app.use("/api/wallet", walletRoutes);
-app.use("/api/transactions", transactionRoutes);
-app.use("/api/referrals", referralRoutes);
-
-// API Docs
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
 
 app.get("/", (_, res) => res.send("DeKingsPalace API Running 👑"));
 
