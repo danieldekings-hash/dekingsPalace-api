@@ -1,15 +1,14 @@
 import express from "express";
-import { createManualDeposit, getWalletBalance } from "../controllers/wallet.controller";
 import { authenticate } from "../middlewares/auth.middleware";
+import { validateBody } from "../middlewares/validation.middleware";
+import { depositSchema, withdrawSchema } from "../validation/wallet.schema";
+import * as controller from "../controllers/wallet.controller";
 
 const router = express.Router();
 
-// Manual deposit endpoint (Admin only for testing)
-// In production, this would be replaced with blockchain webhook confirmation
-router.post("/deposit", authenticate, createManualDeposit);
-
-// Get wallet balance (Authenticated users can check their own balance)
-router.get("/balance", authenticate, getWalletBalance);
+router.get("/", authenticate, controller.getWallet);
+router.get("/addresses", authenticate, controller.getAddresses);
+router.post("/deposit", authenticate, validateBody(depositSchema), controller.deposit);
+router.post("/withdraw", authenticate, validateBody(withdrawSchema), controller.withdraw);
 
 export default router;
-

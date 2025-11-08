@@ -2,12 +2,12 @@ import { Schema, model, Document } from "mongoose";
 
 export interface ITransaction extends Document {
   userId: Schema.Types.ObjectId;
-  type: "deposit" | "withdrawal" | "profit";
+  type: "deposit" | "withdrawal" | "profit" | "referral";
   amount: number;
   currency: string;
   address?: string;
   reference: string;
-  status: "waiting_payment" | "pending" | "confirmed" | "failed" | "cancelled";
+  status: "waiting_payment" | "pending" | "processing" | "confirmed" | "completed" | "failed" | "cancelled";
   txHash?: string;
   confirmations?: number;
   createdAt: Date;
@@ -19,7 +19,7 @@ const TransactionSchema = new Schema<ITransaction>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     type: {
       type: String,
-      enum: ["deposit", "withdrawal", "profit"],
+      enum: ["deposit", "withdrawal", "profit", "referral"],
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },
@@ -28,7 +28,7 @@ const TransactionSchema = new Schema<ITransaction>(
     reference: { type: String, required: true },
     status: {
       type: String,
-      enum: ["waiting_payment", "pending", "confirmed", "failed", "cancelled"],
+      enum: ["waiting_payment", "pending", "processing", "confirmed", "completed", "failed", "cancelled"],
       default: "pending",
     },
     txHash: { type: String },

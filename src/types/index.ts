@@ -36,6 +36,7 @@ export interface AuthResponse {
   status: number;
   message: string;
   token?: string;
+  refreshToken?: string;
   referralCode?: string;
   user?: {
     id: string;

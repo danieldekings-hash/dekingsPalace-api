@@ -116,7 +116,12 @@ export const registerUser = async (data: RegisterUserDTO): Promise<AuthResponse>
   };
 };
 
-export const loginUser = async (data: LoginUserDTO): Promise<AuthResponse> => {
+/**
+ * Verify user email with OTP
+ * @param data - Email and OTP
+ * @returns AuthResponse
+ */
+export const verifyEmail = async (data: VerifyEmailDTO): Promise<AuthResponse> => {
   const user = await User.findOne({ email: data.email });
   if (!user) return { status: 404, message: "User not found" };
 
