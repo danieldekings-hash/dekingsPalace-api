@@ -9,9 +9,9 @@ import { InvestmentError } from "../types";
 export const createInvestment = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { planId, amount, currency } = req.body;
+    const { plan, amount, currency } = req.body;
 
-    const result = await investmentService.createInvestment({ userId, planId, amount, currency });
+    const result = await investmentService.createInvestment({ userId, plan, amount, currency });
 
     // Check if result is an error (InvestmentError has status and message, InvestmentResponse has investmentId)
     if ("status" in result && !("investmentId" in result)) {

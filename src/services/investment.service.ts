@@ -18,7 +18,7 @@ import {
  */
 export const createInvestment = async ({
   userId,
-  planId,
+  plan,
   amount,
   currency,
 }: CreateInvestmentDTO): Promise<InvestmentResponse | InvestmentError> => {
