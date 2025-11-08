@@ -10,6 +10,7 @@ import connectDB from "./config/db";
 import authRoutes from "./routes/auth.routes";
 import investmentRoutes from "./routes/investment.routes";
 import webhookRoutes from "./routes/webhooks.routes";
+import walletRoutes from "./routes/wallet.routes";
 
 dotenv.config();
 connectDB();
@@ -56,6 +57,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 app.use("/api/auth", authRoutes);
 app.use("/api/investments", investmentRoutes);
 app.use("/api/webhooks", webhookRoutes);
+app.use("/api/wallet", walletRoutes);
 
 app.get("/", (_, res) => res.send("DeKingsPalace API Running 👑"));
 

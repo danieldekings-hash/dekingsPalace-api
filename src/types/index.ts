@@ -1,8 +1,9 @@
 import { Schema } from "mongoose";
+import { InvestmentPlan } from "../constants/investment.plans";
 
 export interface CreateInvestmentDTO {
   userId: Schema.Types.ObjectId | string;
-  plan: string;
+  plan: InvestmentPlan | string;
   amount: number;
   currency: string;
 }
@@ -22,6 +23,15 @@ export interface LoginUserDTO {
   password: string;
 }
 
+export interface VerifyEmailDTO {
+  email: string;
+  otp: string;
+}
+
+export interface ResendOTPDTO {
+  email: string;
+}
+
 export interface AuthResponse {
   status: number;
   message: string;
@@ -35,6 +45,8 @@ export interface AuthResponse {
     role: string;
     referralCode: string;
     referredBy?: string;
+    walletBalance?: number;
+    isVerified?: boolean;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -43,6 +55,17 @@ export interface AuthResponse {
 export interface InvestmentResponse {
   investmentId: string;
   reference: string;
-  depositAddress: string;
+  message: string;
+  plan: string;
+  amount: number;
+  expectedReturn: number; // Monthly return amount
+  returnPercentage: number; // Monthly return percentage
+  startDate: Date;
+  endDate: Date;
+  walletBalance: number;
+}
+
+export interface InvestmentError {
+  status: number;
   message: string;
 }
