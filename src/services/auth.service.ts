@@ -226,9 +226,9 @@ export const verifyEmail = async (data: VerifyEmailDTO): Promise<AuthResponse> =
 };
 
 /**
- * Resend OTP to user's email
+ 
  * @param data - Email
- * @returns AuthResponse
+ * @returns 
  */
 export const resendOTP = async (data: ResendOTPDTO): Promise<AuthResponse> => {
   const user = await User.findOne({ email: data.email });
