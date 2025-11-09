@@ -10,7 +10,7 @@ export const registerSchema = z
     referralCode: z.string().optional(),
     role: z.enum(["investor", "admin"]).optional(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data: { password: string; confirmPassword: string }) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
@@ -34,7 +34,7 @@ export const resetPasswordSchema = z
     newPassword: z.string().min(8),
     confirmPassword: z.string().min(8),
   })
-  .refine((d) => d.newPassword === d.confirmPassword, {
+  .refine((d: { newPassword: string; confirmPassword: string }) => d.newPassword === d.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });

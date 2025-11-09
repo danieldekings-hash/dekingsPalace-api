@@ -23,8 +23,11 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "morgan": "^1.10.1",
+    "pino": "^9.4.0",
+    "pino-http": "^10.3.0",
     "resend": "^6.4.2",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

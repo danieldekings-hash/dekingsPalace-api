@@ -1,6 +1,4 @@
 
- 
-
 export enum InvestmentPlan {
   BRONZE = "bronze",
   SILVER = "silver",
