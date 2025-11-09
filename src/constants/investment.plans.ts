@@ -1,8 +1,5 @@
-/**
- * Investment Plan Constants
- * Defines the different investment plans with their amount ranges and monthly return percentages
- * Returns are calculated on a monthly basis
- */
+
+ 
 
 export enum InvestmentPlan {
   BRONZE = "bronze",
