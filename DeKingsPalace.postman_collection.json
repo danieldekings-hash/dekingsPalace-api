@@ -361,7 +361,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 1000,\n  \"currency\": \"BTC\"\n}"
+							"raw": "{\n  \"plan\": \"gold\",\n  \"amount\": 200,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
@@ -393,7 +393,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 5000,\n  \"currency\": \"ETH\"\n}"
+							"raw": "{\n  \"plan\": \"platinum\",\n  \"amount\": 5000,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
@@ -425,7 +425,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"planId\": \"{{plan_id}}\",\n  \"amount\": 500,\n  \"currency\": \"USDT\"\n}"
+							"raw": "{\n  \"plan\": \"bronze\",\n  \"amount\": 30,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
@@ -457,7 +457,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"plan\": \"silver\",\n  \"amount\": 75,\n  \"currency\": \"USD\"\n}"
+							"raw": "{\n  \"plan\": \"silver\",\n  \"amount\": 75,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
@@ -489,7 +489,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"plan\": \"diamond\",\n  \"amount\": 10000,\n  \"currency\": \"USD\"\n}"
+							"raw": "{\n  \"plan\": \"diamond\",\n  \"amount\": 10000,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/investments",
@@ -658,7 +658,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"amount\": 1000,\n  \"currency\": \"USD\"\n}"
+							"raw": "{\n  \"amount\": 1000,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/wallet/deposit",
@@ -707,7 +707,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"amount\": 5000,\n  \"currency\": \"USD\"\n}"
+							"raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"amount\": 5000,\n  \"currency\": \"USDT\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/wallet/deposit",

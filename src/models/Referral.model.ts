@@ -7,7 +7,7 @@ export interface IReferral extends Document {
   level: number; // 1..10
   status: "pending" | "active" | "inactive";
   totalEarnings: number;
-  currency: "BTC" | "ETH" | "USDT";
+  currency: "USDT";
   lastEarningDate?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -21,7 +21,7 @@ const ReferralSchema = new Schema<IReferral>(
     level: { type: Number, default: 1, min: 1, max: 10 },
     status: { type: String, enum: ["pending", "active", "inactive"], default: "pending" },
     totalEarnings: { type: Number, default: 0 },
-    currency: { type: String, enum: ["BTC", "ETH", "USDT"], default: "USDT" },
+    currency: { type: String, enum: ["USDT"], default: "USDT" },
     lastEarningDate: { type: Date },
   },
   { timestamps: true }
