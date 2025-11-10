@@ -12,6 +12,7 @@ import cookieParser from "cookie-parser";
 // Routes
 import authRoutes from "./routes/auth.routes";
 import investmentRoutes from "./routes/investment.routes";
+import plansRoutes from "./routes/plans.routes";
 import webhookRoutes from "./routes/webhooks.routes";
 import walletRoutes from "./routes/wallet.routes";
 
@@ -67,6 +68,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/investments", investmentRoutes);
+app.use("/api/plans", plansRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/wallet", walletRoutes);
 
