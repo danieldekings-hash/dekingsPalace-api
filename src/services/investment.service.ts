@@ -1,6 +1,7 @@
 import { Investment } from "../models/Investment.model";
 import { Transaction } from "../models/Transaction.model";
 import { User } from "../models/User.model";
+import { Wallet } from "../models/Wallet.model";
 import { v4 as uuid } from "uuid";
 import mongoose from "mongoose";
 import { CreateInvestmentDTO, InvestmentResponse, InvestmentError } from "../types";
@@ -9,6 +10,8 @@ import {
   getPlanConfig,
   calculateInvestmentReturn,
 } from "../constants/investment.plans";
+import { INVESTMENT_PLANS, InvestmentPlan } from "../constants/investment.plans";
+import { Earning } from "../models/Earning.model";
 
 /**
  * Creates a new investment by deducting from user's wallet
@@ -55,12 +58,30 @@ export const createInvestment = async ({
       return { status: 404, message: "User not found" };
     }
 
-    // Check wallet balance
-    if (user.walletBalance < amount) {
+    // Load user's on-chain wallet (USDT is treated as USD balance for investments)
+    let wallet = await Wallet.findOne({ userId }).session(session);
+    if (!wallet) {
+      // If wallet doesn't exist yet, user effectively has 0 balance
       await session.abortTransaction();
       return {
         status: 400,
-        message: `Insufficient wallet balance. Available: $${user.walletBalance.toFixed(2)}, Required: $${amount.toFixed(2)}.`,
+        message: `Insufficient wallet balance. Available: $0.00, Required: $${amount.toFixed(2)}.`,
+      };
+    }
+
+    // Normalize currency and enforce USDT for investment denomination
+    const denoCurrency = (currency || "USDT").toUpperCase() as "USDT" | "BTC" | "ETH";
+    const spendCurrency: "USDT" = "USDT";
+
+    // Check wallet balance in USDT
+    const available = Number(wallet.balances?.[spendCurrency] || 0);
+    if (available < amount) {
+      await session.abortTransaction();
+      return {
+        status: 400,
+        message: `Insufficient wallet balance. Available: $${available.toFixed(
+          2
+        )}, Required: $${amount.toFixed(2)}.`,
       };
     }
 
@@ -71,9 +92,9 @@ export const createInvestment = async ({
     // Generate reference for transaction
     const reference = `inv_${uuid()}`;
 
-    // Deduct amount from wallet (atomic operation)
-    user.walletBalance -= amount;
-    await user.save({ session });
+    // Deduct amount from wallet USDT balance (atomic operation)
+    wallet.balances[spendCurrency] = available - amount;
+    await wallet.save({ session });
 
     // Calculate investment duration (30 days = 1 month)
     // Returns are paid monthly, so the investment runs for at least 1 month
@@ -81,8 +102,7 @@ export const createInvestment = async ({
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 30); // 30 days = 1 month
 
-    // Create investment record
-    // returns field stores the monthly return amount
+
     const investment = await Investment.create(
       [
         {
@@ -107,7 +127,7 @@ export const createInvestment = async ({
           userId,
           type: "withdrawal",
           amount,
-          currency: currency.toUpperCase(),
+          currency: spendCurrency,
           reference,
           status: "confirmed",
           txHash: `wallet_deduction_${reference}`,
@@ -130,7 +150,7 @@ export const createInvestment = async ({
       returnPercentage, // Monthly return percentage
       startDate,
       endDate,
-      walletBalance: user.walletBalance,
+      walletBalance: Number(wallet.balances?.[spendCurrency] || 0),
     };
   } catch (error: any) {
     // Rollback transaction on error
@@ -144,3 +164,160 @@ export const createInvestment = async ({
     session.endSession();
   }
 };
+
+type ListQuery = {
+  status?: "all" | "active" | "completed" | "pending" | "cancelled";
+  sortBy?: "startDate" | "amount" | "planName" | "status";
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+};
+
+function computeStatus(inv: any, now = new Date()): "pending" | "active" | "completed" | "cancelled" {
+  if (inv.status === "cancelled") return "cancelled";
+  if (!inv.startDate || now < inv.startDate) return "pending";
+  if (inv.endDate && now >= inv.endDate) return "completed";
+  return "active";
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function computeNextMonthlyPayout(startDate?: Date | null, now = new Date()) {
+  if (!startDate) return null;
+  // Payout every 30 days from startDate
+  const cycleDays = 30;
+  let next = new Date(startDate);
+  while (next <= now) {
+    next = addDays(next, cycleDays);
+  }
+  return next.toISOString();
+}
+
+function computeDerived(inv: any, earningsSum = 0) {
+  const planKey = String(inv.plan).toLowerCase() as keyof typeof InvestmentPlan;
+  const cfg = getPlanConfig(planKey as any);
+  const name = cfg?.name ?? inv.plan;
+  const tier = name.split(" ")[0]; // Bronze, Silver, etc.
+  const planPercentage = cfg?.returnPercentage ?? 0;
+  const currency = "USDT";
+  const startDate = inv.startDate ?? null;
+  const endDate = inv.endDate ?? null;
+  const status = computeStatus(inv);
+  const dailyReturn = cfg ? (inv.amount * (cfg.returnPercentage / 100)) / 30 : 0;
+  const expectedReturn = cfg ? inv.amount + inv.amount * (cfg.returnPercentage / 100) : inv.amount;
+  const totalEarnings = earningsSum;
+  const now = new Date();
+  const daysRemaining =
+    endDate && now < endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const nextPayout = computeNextMonthlyPayout(startDate, now);
+
+  return {
+    id: String(inv._id),
+    planName: name,
+    planTier: tier,
+    amount: inv.amount,
+    currency,
+    startDate,
+    endDate,
+    status,
+    dailyReturn,
+    totalEarnings,
+    expectedReturn,
+    planPercentage,
+    daysRemaining,
+    nextPayout,
+  };
+}
+
+export async function listInvestments(userId: string, query: ListQuery) {
+  const { status = "all", sortBy = "startDate", sortOrder = "desc", page = 1, pageSize = 20 } = query || {};
+  const filter: any = { userId };
+  if (status !== "all") {
+    filter.status = status;
+  }
+  const sort: any = {};
+  if (sortBy === "planName") sort.plan = sortOrder === "asc" ? 1 : -1;
+  else sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+
+  const skip = (page - 1) * pageSize;
+  const [items, total] = await Promise.all([
+    Investment.find(filter).sort(sort).skip(skip).limit(pageSize).lean(),
+    Investment.countDocuments(filter),
+  ]);
+
+  const ids = items.map((i) => i._id);
+  const earnings = await Earning.aggregate([
+    { $match: { userId: new mongoose.Types.ObjectId(userId), investmentId: { $in: ids } } },
+    { $group: { _id: "$investmentId", total: { $sum: "$amount" } } },
+  ]);
+  const earningsMap = new Map<string, number>(earnings.map((e: any) => [String(e._id), e.total]));
+  const data = items.map((inv) => computeDerived(inv, earningsMap.get(String(inv._id)) || 0));
+  return { data, meta: { total, page, pageSize } };
+}
+
+export async function getInvestmentById(userId: string, id: string) {
+  const inv = await Investment.findOne({ _id: id, userId }).lean();
+  if (!inv) return null;
+  const sum = await Earning.aggregate([
+    { $match: { userId: new mongoose.Types.ObjectId(userId), investmentId: new mongoose.Types.ObjectId(id) } },
+    { $group: { _id: null, total: { $sum: "$amount" } } },
+  ]);
+  const total = sum[0]?.total || 0;
+  return computeDerived(inv, total);
+}
+
+export async function getInvestmentsSummary(userId: string) {
+  const items = await Investment.find({ userId }).lean();
+  const ids = items.map((i) => i._id);
+  const earnings = await Earning.aggregate([
+    { $match: { userId: new mongoose.Types.ObjectId(userId), investmentId: { $in: ids } } },
+    { $group: { _id: "$investmentId", total: { $sum: "$amount" } } },
+  ]);
+  const earningsMap = new Map<string, number>(earnings.map((e: any) => [String(e._id), e.total]));
+  const derived = items.map((inv) => computeDerived(inv, earningsMap.get(String(inv._id)) || 0));
+  const totalInvested = derived.reduce((s, i) => s + i.amount, 0);
+  const totalEarnings = derived.reduce((s, i) => s + i.totalEarnings, 0);
+  const dailyEarnings = derived.reduce((s, i) => s + i.dailyReturn, 0);
+  const expectedTotalReturn = derived.reduce((s, i) => s + i.expectedReturn, 0);
+  const activeCount = derived.filter((i) => i.status === "active").length;
+  const totalCount = derived.length;
+  return { totalInvested, totalEarnings, dailyEarnings, expectedTotalReturn, activeCount, totalCount };
+}
+
+export async function patchInvestment(
+  userId: string,
+  id: string,
+  action: "pause" | "resume"
+): Promise<any | InvestmentError> {
+  const inv = await Investment.findOne({ _id: id, userId });
+  if (!inv) return { status: 404, message: "Investment not found" };
+  if (action === "pause") {
+    if (inv.status !== "active") return { status: 400, message: "Only active investments can be paused" };
+    inv.status = "pending"; // treating pause as pending for now
+  } else {
+    if (inv.status !== "pending") return { status: 400, message: "Only pending investments can be resumed" };
+    inv.status = "active";
+  }
+  await inv.save();
+  return computeDerived(inv.toObject());
+}
+
+export async function exportInvestments(userId: string, query: any) {
+  const { format = "csv" } = query || {};
+  const { data } = await listInvestments(userId, query);
+  if (format === "xlsx") {
+    // Minimal in-memory XLSX (CSV masquerade) for now
+    const header = Object.keys(data[0] || {}).join(",");
+    const rows = data.map((r) => Object.values(r).join(","));
+    const csv = [header, ...rows].join("\n");
+    return { buffer: csv, mime: "text/csv", filename: "investments.csv" };
+  }
+  const header = Object.keys(data[0] || {}).join(",");
+  const rows = data.map((r) => Object.values(r).join(","));
+  const csv = [header, ...rows].join("\n");
+  return { buffer: csv, mime: "text/csv", filename: "investments.csv" };
+}
