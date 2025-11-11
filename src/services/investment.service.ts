@@ -12,6 +12,7 @@ import {
 } from "../constants/investment.plans";
 import { INVESTMENT_PLANS, InvestmentPlan } from "../constants/investment.plans";
 import { Earning } from "../models/Earning.model";
+import { awardReferralBonus } from "./referral-bonus.service";
 
 /**
  * Creates a new investment by deducting from user's wallet
@@ -135,6 +136,15 @@ export const createInvestment = async ({
         },
       ],
       { session }
+    );
+
+    // Award referral bonus if user was referred
+    await awardReferralBonus(
+      userId,
+      investmentId,
+      amount,
+      plan.toLowerCase(),
+      session
     );
 
     // Commit transaction
