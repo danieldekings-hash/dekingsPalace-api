@@ -23,7 +23,8 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
         fail("VALIDATION_ERROR", "Invalid query parameters", parsed.error.flatten())
       );
     }
-    req.query = parsed.data as any;
+    // Store validated query in a custom property since req.query is read-only
+    (req as any).validatedQuery = parsed.data as any;
     next();
   };
 }

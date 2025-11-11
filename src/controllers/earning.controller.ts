@@ -8,14 +8,8 @@ import { ok, fail } from "../utils/response";
 export async function listEarnings(req: Request, res: Response) {
   try {
     const userId = (req as any).user.id;
-    const query = {
-      type: req.query.type as "investment_earning" | "referral_bonus" | "all" | undefined,
-      isWithdrawn: req.query.isWithdrawn === "true" ? true : req.query.isWithdrawn === "false" ? false : undefined,
-      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
-      pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : undefined,
-      sortBy: req.query.sortBy as "date" | "amount" | "withdrawableDate" | undefined,
-      sortOrder: req.query.sortOrder as "asc" | "desc" | undefined,
-    };
+    // Query parameters are already validated and transformed by validation middleware
+    const query = (req as any).validatedQuery || req.query;
 
     const result = await earningService.listEarnings(userId, query);
     res.json(ok(result));

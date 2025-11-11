@@ -2,9 +2,18 @@ import { z } from "zod";
 
 export const listEarningsSchema = z.object({
   type: z.enum(["investment_earning", "referral_bonus", "all"]).optional(),
-  isWithdrawn: z.boolean().optional(),
-  page: z.number().int().positive().optional(),
-  pageSize: z.number().int().positive().max(100).optional(),
+  isWithdrawn: z
+    .preprocess(
+      (val) => {
+        if (val === "true" || val === true) return true;
+        if (val === "false" || val === false) return false;
+        return undefined;
+      },
+      z.boolean().optional()
+    )
+    .optional(),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(100).optional(),
   sortBy: z.enum(["date", "amount", "withdrawableDate"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
