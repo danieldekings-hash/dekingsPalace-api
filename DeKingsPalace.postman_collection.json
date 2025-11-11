@@ -504,6 +504,148 @@
 						"description": "Create a new investment with Diamond Plan ($5001+, 20% monthly return). Amount is deducted from wallet balance."
 					},
 					"response": []
+				},
+				{
+					"name": "List Investments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/investments?status=all&sortBy=startDate&sortOrder=desc&page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments"
+							],
+							"query": [
+								{ "key": "status", "value": "all" },
+								{ "key": "sortBy", "value": "startDate" },
+								{ "key": "sortOrder", "value": "desc" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "20" }
+							]
+						},
+						"description": "List investments for the authenticated user with pagination, status filter, and sorting."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Investment by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/investments/{{investment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments",
+								"{{investment_id}}"
+							]
+						},
+						"description": "Get details of a specific investment by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Investment (pause/resume)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"pause\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/investments/{{investment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments",
+								"{{investment_id}}"
+							]
+						},
+						"description": "Pause or resume an investment. Body.action must be either \"pause\" or \"resume\"."
+					},
+					"response": []
+				},
+				{
+					"name": "Investments Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/investments/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments",
+								"summary"
+							]
+						},
+						"description": "Get aggregate summary for the authenticated user's investments."
+					},
+					"response": []
+				},
+				{
+					"name": "Export Investments (CSV/XLSX)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/investments/export?format=csv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"investments",
+								"export"
+							],
+							"query": [
+								{ "key": "format", "value": "csv" }
+							]
+						},
+						"description": "Export investments as CSV or XLSX. Optional query params: status, sortBy, sortOrder."
+					},
+					"response": []
 				}
 			],
 			"description": "Investment management endpoints - Create investments from wallet balance. Investment plans: Bronze ($20-$50, 5%), Silver ($51-$100, 8%), Gold ($101-$500, 10%), Platinum ($501-$5000, 15%), Diamond ($5001+, 20%). Returns are calculated monthly."
@@ -546,7 +688,8 @@
 			"name": "Transactions",
 			"item": [
 				{"name": "List Transactions", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions?limit=10", "host": ["{{base_url}}"], "path": ["api","transactions"], "query": [{"key":"limit","value":"10"}]}}, "response": []},
-				{"name": "Export CSV", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/export", "host": ["{{base_url}}"], "path": ["api","transactions","export"]}}, "response": []}
+				{"name": "Export CSV", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/export", "host": ["{{base_url}}"], "path": ["api","transactions","export"]}}, "response": []},
+				{"name": "Get Transaction by ID", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/{{transaction_id}}", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}"]}}, "response": []}
 			],
 			"description": "Transaction endpoints"
 		},

@@ -9,8 +9,11 @@ import { fail } from "../utils/response";
 function validateQuery(schema: any) {
   return (req: Request, res: Response, next: NextFunction) => {
     const parsed = schema.safeParse(req.query);
-    if (!parsed.success) return res.status(400).json(fail("VALIDATION_ERROR", "Invalid query", parsed.error.flatten()));
-    req.query = parsed.data as any;
+    if (!parsed.success) {
+      return res.status(400).json(fail("VALIDATION_ERROR", "Invalid query", parsed.error.flatten()));
+    }
+    // Merge validated data into req.query to avoid assigning to a read-only getter
+    Object.assign(req.query as any, parsed.data);
     next();
   };
 }

@@ -26,7 +26,28 @@ export async function listTransactions({ userId, type, status, startDate, endDat
     Transaction.countDocuments(query),
   ]);
 
-  return { transactions: items, total, page, limit };
+  // Enhance response with wallet-focused labeling without changing stored enums
+  const enhanced = items.map((t) => {
+    const isInvestmentDebit = t.type === "withdrawal" && typeof t.reference === "string" && t.reference.startsWith("inv_");
+    const displayType =
+      t.type === "deposit"
+        ? "wallet_deposit"
+        : isInvestmentDebit
+        ? "wallet_debit"
+        : t.type === "withdrawal"
+        ? "wallet_withdrawal"
+        : t.type;
+    return { ...t, displayType };
+  });
+
+  return {
+    category: "wallet",
+    title: "Wallet Transactions",
+    transactions: enhanced,
+    total,
+    page,
+    limit,
+  };
 }
 
 export async function getTransactionById(userId: string, id: string) {
