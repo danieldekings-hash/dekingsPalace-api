@@ -16,6 +16,7 @@ import plansRoutes from "./routes/plans.routes";
 import webhookRoutes from "./routes/webhooks.routes";
 import walletRoutes from "./routes/wallet.routes";
 import transactionsRoutes from "./routes/transactions.routes";
+import earningsRoutes from "./routes/earnings.routes";
 
 dotenv.config();
 if (process.env.NODE_ENV !== "test") {
@@ -73,6 +74,7 @@ app.use("/api/plans", plansRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/transactions", transactionsRoutes);
+app.use("/api/earnings", earningsRoutes);
 
 app.get("/", (_, res) => res.send("DeKingsPalace API Running 👑"));
 

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "dekingspalace-api-collection",
 		"name": "DeKingsPalace API",
-		"description": "Investment Platform API - Authentication, Investments, and Webhooks",
+		"description": "Investment Platform API - Authentication, Investments, Earnings, Referrals, and Webhooks",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -689,7 +689,10 @@
 			"item": [
 				{"name": "List Transactions", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions?limit=10", "host": ["{{base_url}}"], "path": ["api","transactions"], "query": [{"key":"limit","value":"10"}]}}, "response": []},
 				{"name": "Export CSV", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/export", "host": ["{{base_url}}"], "path": ["api","transactions","export"]}}, "response": []},
-				{"name": "Get Transaction by ID", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/{{transaction_id}}", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}"]}}, "response": []}
+				{"name": "Get Transaction by ID", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/{{transaction_id}}", "host": ["{{base_url}}"], "path": ["api","transactions","{{transaction_id}}"]}}, "response": []},
+				{"name": "Admin - List Withdrawals", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": {"raw": "{{base_url}}/api/transactions/admin/withdrawals?status=pending&page=1&limit=20", "host": ["{{base_url}}"], "path": ["api","transactions","admin","withdrawals"], "query": [{"key":"status","value":"pending"},{"key":"page","value":"1"},{"key":"limit","value":"20"}]}}, "response": []},
+				{"name": "Admin - Confirm Withdrawal", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"txHash\": \"onchain-or-internal-hash\"\n}"}, "url": {"raw": "{{base_url}}/api/transactions/{{withdrawal_transaction_id}}/confirm", "host": ["{{base_url}}"], "path": ["api","transactions","{{withdrawal_transaction_id}}","confirm"]}}, "response": []},
+				{"name": "Admin - Fail Withdrawal", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Insufficient reserves\"\n}"}, "url": {"raw": "{{base_url}}/api/transactions/{{withdrawal_transaction_id}}/fail", "host": ["{{base_url}}"], "path": ["api","transactions","{{withdrawal_transaction_id}}","fail"]}}, "response": []}
 			],
 			"description": "Transaction endpoints"
 		},
@@ -701,6 +704,358 @@
 				{"name": "Referral Earnings", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/referrals/earnings", "host": ["{{base_url}}"], "path": ["api","referrals","earnings"]}}, "response": []}
 			],
 			"description": "Referral endpoints"
+		},
+		{
+			"name": "Earnings",
+			"item": [
+				{
+					"name": "Get Earnings Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings",
+								"summary"
+							]
+						},
+						"description": "Get earnings summary including total earnings, withdrawn amount, available amount, investment earnings, referral bonuses, and withdrawable amount. Shows aggregate statistics for all earnings."
+					},
+					"response": []
+				},
+				{
+					"name": "List Earnings - All",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings?type=all&page=1&pageSize=20&sortBy=date&sortOrder=desc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "all",
+									"description": "Filter by type: 'investment_earning', 'referral_bonus', or 'all'"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								},
+								{
+									"key": "sortBy",
+									"value": "date",
+									"description": "Sort by: 'date', 'amount', or 'withdrawableDate'"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Sort order: 'asc' or 'desc'"
+								}
+							]
+						},
+						"description": "List all earnings (investment earnings and referral bonuses) with pagination and filtering. Query params: type (investment_earning|referral_bonus|all), isWithdrawn (true|false), page, pageSize, sortBy (date|amount|withdrawableDate), sortOrder (asc|desc)."
+					},
+					"response": []
+				},
+				{
+					"name": "List Earnings - Investment Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings?type=investment_earning&page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "investment_earning"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
+							]
+						},
+						"description": "List only investment earnings (excludes referral bonuses)."
+					},
+					"response": []
+				},
+				{
+					"name": "List Earnings - Referral Bonuses Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings?type=referral_bonus&page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "referral_bonus"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
+							]
+						},
+						"description": "List only referral bonus earnings. Shows bonuses earned from referring users. Referral bonus percentages: GOLD and below (Bronze, Silver, Gold) = 3%, DIAMOND and above (Platinum, Diamond) = 5%."
+					},
+					"response": []
+				},
+				{
+					"name": "List Earnings - Withdrawn Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings?isWithdrawn=true&page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "isWithdrawn",
+									"value": "true"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
+							]
+						},
+						"description": "List only withdrawn earnings (earnings that have been processed by admin)."
+					},
+					"response": []
+				},
+				{
+					"name": "List Earnings - Available for Withdrawal",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings?isWithdrawn=false&page=1&pageSize=20&sortBy=withdrawableDate&sortOrder=asc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "isWithdrawn",
+									"value": "false"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								},
+								{
+									"key": "sortBy",
+									"value": "withdrawableDate"
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc"
+								}
+							]
+						},
+						"description": "List earnings available for withdrawal (not withdrawn yet). Note: Earnings can only be withdrawn after complete 30 days from the earning date."
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Earnings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data) {",
+									"        pm.environment.set('withdrawal_reference', response.data.reference);",
+									"        pm.environment.set('withdrawal_transaction_id', response.data.transactionId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100,\n  \"currency\": \"USDT\",\n  \"walletAddress\": \"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/earnings/withdraw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings",
+								"withdraw"
+							]
+						},
+						"description": "Request withdrawal of available earnings. Earnings can only be withdrawn after complete 30 days from the earning date. The withdrawal request will be created with 'pending' status and will be processed manually by admin. Earnings are reserved (linked to transaction) but not marked as withdrawn until admin processes the request. Wallet balance is not deducted until admin processes the withdrawal."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Today's Income",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings/today",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings",
+								"today"
+							]
+						}
+					},
+					"response": [],
+					"description": "Returns today's income split by category: investment_earning, referral_bonus, and total. Uses UTC day boundaries."
+				},
+				{
+					"name": "Get Daily Breakdown",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/earnings/daily?start=2025-11-01&end=2025-11-12",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"earnings",
+								"daily"
+							],
+							"query": [
+								{
+									"key": "start",
+									"value": "2025-11-01",
+									"description": "Optional YYYY-MM-DD (UTC)"
+								},
+								{
+									"key": "end",
+									"value": "2025-11-12",
+									"description": "Optional YYYY-MM-DD (UTC)"
+								}
+							]
+						}
+					},
+					"response": [],
+					"description": "Returns per-day totals between start and end (inclusive), split by investment and referral with a total field. Dates are UTC; if omitted, defaults to today."
+				}
+			],
+			"description": "Earnings management endpoints - View all earnings (investment earnings and referral bonuses) and request withdrawals. Referral bonuses: GOLD and below (Bronze, Silver, Gold) = 3%, DIAMOND and above (Platinum, Diamond) = 5%. Earnings can only be withdrawn after complete 30 days from the earning date. Withdrawals are processed manually by admin."
 		},
 		{
 			"name": "Webhooks",

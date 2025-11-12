@@ -1,4 +1,6 @@
 import { Transaction, ITransaction } from "../models/Transaction.model";
+import { Earning } from "../models/Earning.model";
+import mongoose from "mongoose";
 
 type ListFilters = {
   userId: string;
@@ -19,7 +21,6 @@ export async function listTransactions({ userId, type, status, startDate, endDat
     if (startDate) query.createdAt.$gte = startDate;
     if (endDate) query.createdAt.$lte = endDate;
   }
-
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([
     Transaction.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
@@ -48,6 +49,111 @@ export async function listTransactions({ userId, type, status, startDate, endDat
     page,
     limit,
   };
+}
+
+export async function listAllWithdrawals({
+  status,
+  page = 1,
+  limit = 20,
+}: { status?: ITransaction["status"]; page?: number; limit?: number }) {
+  const query: any = { type: "withdrawal" };
+  if (status) query.status = status;
+
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    Transaction.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Transaction.countDocuments(query),
+  ]);
+
+  // Map to admin view (includes wallet address as 'address')
+  const results = items.map((t) => ({
+    id: String(t._id),
+    userId: String(t.userId),
+    amount: t.amount,
+    currency: t.currency,
+    status: t.status,
+    address: t.address || null,
+    reference: t.reference,
+    txHash: t.txHash || null,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  }));
+
+  return { data: results, meta: { total, page, limit } };
+}
+
+
+export async function confirmWithdrawalTransaction(
+  id: string,
+  { txHash }: { txHash?: string } = {}
+) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const tx = await Transaction.findById(id).session(session);
+    if (!tx) throw new Error("Transaction not found");
+    if (tx.type !== "withdrawal") throw new Error("Not a withdrawal transaction");
+    if (!(tx.status === "pending" || tx.status === "processing")) {
+      throw new Error("Only pending/processing withdrawals can be confirmed");
+    }
+
+    // Mark linked earnings as withdrawn
+    await Earning.updateMany(
+      { withdrawalTransactionId: tx._id, isWithdrawn: false },
+      { $set: { isWithdrawn: true } },
+      { session }
+    );
+
+    tx.status = "confirmed";
+    if (txHash) tx.txHash = txHash;
+    await tx.save({ session });
+
+    await session.commitTransaction();
+    return { id: String(tx._id), status: tx.status };
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
+}
+
+export async function failWithdrawalTransaction(
+  id: string,
+  _data: { reason?: string } = {}
+) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const tx = await Transaction.findById(id).session(session);
+    if (!tx) throw new Error("Transaction not found");
+    if (tx.type !== "withdrawal") throw new Error("Not a withdrawal transaction");
+    if (!(tx.status === "pending" || tx.status === "processing")) {
+      throw new Error("Only pending/processing withdrawals can be failed");
+    }
+
+    // Release linked earnings reservation
+    await Earning.updateMany(
+      { withdrawalTransactionId: tx._id, isWithdrawn: false },
+      { $set: { withdrawalTransactionId: null } },
+      { session }
+    );
+
+    tx.status = "failed";
+    await tx.save({ session });
+
+    await session.commitTransaction();
+    return { id: String(tx._id), status: tx.status };
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
 }
 
 export async function getTransactionById(userId: string, id: string) {

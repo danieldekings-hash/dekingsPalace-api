@@ -24,21 +24,63 @@
 
 ## 📋 Collection Structure
 
-### 1. Authentication (3 requests)
+### 1. Authentication (8 requests)
 - **Register User** - Create investor account
+- **Verify Email** - Verify email with OTP
+- **Resend OTP** - Resend verification code
 - **Login User** - Get JWT token
 - **Register Admin** - Create admin account
+- **Refresh Token** - Refresh JWT token
+- **Logout** - Logout user
+- **Forgot Password** - Request password reset
+- **Reset Password** - Reset password with token
 
-### 2. Investments (3 requests)
-- **Create Investment - BTC** - Bitcoin investment
-- **Create Investment - ETH** - Ethereum investment
-- **Create Investment - USDT** - USDT investment
+### 2. Investments (8 requests)
+- **Create Investment - Gold Plan** - Gold plan investment
+- **Create Investment - Platinum Plan** - Platinum plan investment
+- **Create Investment - Bronze Plan** - Bronze plan investment
+- **Create Investment - Silver Plan** - Silver plan investment
+- **Create Investment - Diamond Plan** - Diamond plan investment
+- **List Investments** - List all investments with filters
+- **Get Investment by ID** - Get specific investment details
+- **Patch Investment** - Pause/resume investment
+- **Investments Summary** - Get aggregate investment statistics
+- **Export Investments** - Export investments as CSV/XLSX
 
-### 3. Webhooks (2 requests)
+### 3. Plans (2 requests)
+- **List Active Plans** - Get all active investment plans
+- **Create Plan (Admin)** - Create new investment plan (admin only)
+
+### 4. Wallet (4 requests)
+- **Get Wallet** - Get wallet details
+- **Get Addresses** - Get crypto deposit addresses
+- **Create Deposit** - Deposit funds to wallet
+- **Request Withdrawal** - Request wallet withdrawal
+
+### 5. Transactions (3 requests)
+- **List Transactions** - List all transactions
+- **Export CSV** - Export transactions as CSV
+- **Get Transaction by ID** - Get specific transaction details
+
+### 6. Referrals (3 requests)
+- **Referral Info** - Get referral summary and code
+- **Referral List** - List referred users
+- **Referral Earnings** - List referral earnings
+
+### 7. Earnings (7 requests)
+- **Get Earnings Summary** - Get aggregate earnings statistics
+- **List Earnings - All** - List all earnings with filters
+- **List Earnings - Investment Only** - List only investment earnings
+- **List Earnings - Referral Bonuses Only** - List only referral bonuses
+- **List Earnings - Withdrawn Only** - List withdrawn earnings
+- **List Earnings - Available for Withdrawal** - List earnings ready to withdraw
+- **Withdraw Earnings** - Request earnings withdrawal
+
+### 8. Webhooks (2 requests)
 - **Payment Confirmation - Success** - Simulate successful payment
 - **Payment Confirmation - Failed** - Simulate failed payment
 
-### 4. Health Check (1 request)
+### 9. Health Check (1 request)
 - **Root Endpoint** - Check API status
 
 ## 🔄 Testing Workflow
@@ -78,6 +120,10 @@ The collection automatically manages these variables:
 | `investment_id` | Created investment ID | ✅ Auto |
 | `payment_reference` | Payment reference code | ✅ Auto |
 | `deposit_address` | Crypto deposit address | ✅ Auto |
+| `withdrawal_reference` | Earnings withdrawal reference | ✅ Auto |
+| `withdrawal_transaction_id` | Withdrawal transaction ID | ✅ Auto |
+| `wallet_balance` | Current wallet balance | ✅ Auto |
+| `referral_code` | User's referral code | ✅ Auto |
 
 ## 📝 Request Examples
 
@@ -155,6 +201,101 @@ The collection automatically manages these variables:
 }
 ```
 
+### Get Earnings Summary
+```http
+GET /api/earnings/summary
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "data": {
+    "totalEarnings": 500.00,
+    "totalWithdrawn": 100.00,
+    "totalAvailable": 400.00,
+    "investmentEarnings": 300.00,
+    "referralBonuses": 200.00,
+    "withdrawableAmount": 250.00,
+    "pendingAmount": 150.00
+  }
+}
+```
+
+### List Earnings
+```http
+GET /api/earnings?type=all&page=1&pageSize=20&sortBy=date&sortOrder=desc
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "data": {
+    "earnings": [
+      {
+        "id": "earning_id_123",
+        "type": "investment_earning",
+        "amount": 50.00,
+        "date": "2024-01-15T00:00:00.000Z",
+        "withdrawableDate": "2024-02-15T00:00:00.000Z",
+        "isWithdrawn": false,
+        "investment": {
+          "plan": "gold",
+          "amount": 500
+        }
+      },
+      {
+        "id": "earning_id_456",
+        "type": "referral_bonus",
+        "amount": 15.00,
+        "date": "2024-01-20T00:00:00.000Z",
+        "withdrawableDate": "2024-02-20T00:00:00.000Z",
+        "isWithdrawn": false,
+        "referredUser": {
+          "fullName": "Jane Doe",
+          "email": "jane@example.com"
+        },
+        "referralTier": "Gold",
+        "referralPercentage": 3
+      }
+    ],
+    "meta": {
+      "total": 25,
+      "page": 1,
+      "pageSize": 20,
+      "totalPages": 2
+    }
+  }
+}
+```
+
+### Withdraw Earnings
+```json
+{
+  "amount": 100.00,
+  "currency": "USDT",
+  "walletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+}
+```
+
+**Response:**
+```json
+{
+  "status": 201,
+  "message": "Withdrawal request created successfully. It will be processed by admin manually.",
+  "data": {
+    "reference": "earn_with_a1b2c3d4-e5f6-7890",
+    "transactionId": "transaction_id_123",
+    "message": "Withdrawal request created successfully. It will be processed by admin manually."
+  }
+}
+```
+
+**Note:** Earnings can only be withdrawn after complete 30 days from the earning date. Withdrawals are processed manually by admin.
+
 ## 🎯 Quick Test Scenarios
 
 ### Scenario 1: New User Investment
@@ -171,6 +312,14 @@ The collection automatically manages these variables:
 1. Login User
 2. Create Investment - USDT
 3. Payment Confirmation - Failed
+
+### Scenario 4: Earnings and Withdrawal
+1. Login User
+2. Create Investment - Gold Plan (to generate earnings)
+3. Get Earnings Summary (view total earnings)
+4. List Earnings - All (view all earnings including referral bonuses)
+5. List Earnings - Available for Withdrawal (check withdrawable earnings)
+6. Withdraw Earnings (request withdrawal - requires 30 days wait)
 
 ## 🔧 Customization
 
@@ -208,7 +357,10 @@ If auto-save fails:
 |----------|--------------|-------------|
 | Register | 201 | 400 (email exists) |
 | Login | 200 | 401 (invalid), 404 (not found) |
-| Create Investment | 201 | 401 (unauthorized) |
+| Create Investment | 201 | 401 (unauthorized), 400 (insufficient balance) |
+| Get Earnings Summary | 200 | 401 (unauthorized) |
+| List Earnings | 200 | 401 (unauthorized), 400 (invalid query) |
+| Withdraw Earnings | 201 | 401 (unauthorized), 400 (no withdrawable earnings, insufficient earnings) |
 | Webhook | 200 | 500 (processing error) |
 
 ## 🎉 Tips
@@ -218,5 +370,31 @@ If auto-save fails:
 - ✅ Use **Tests** tab to add custom assertions
 - ✅ Export environment to share with team
 - ✅ Create multiple environments (dev, staging, prod)
+
+## 💰 Earnings & Referral Bonuses
+
+### Referral Bonus System
+- **GOLD and below** (Bronze, Silver, Gold): **3%** referral bonus
+- **DIAMOND and above** (Platinum, Diamond): **5%** referral bonus
+
+### Earnings Types
+1. **Investment Earnings** - Earnings from active investments
+2. **Referral Bonuses** - Bonuses earned when referred users make investments
+
+### Withdrawal Rules
+- Earnings can only be withdrawn after **complete 30 days** from the earning date
+- Withdrawal requests are created with `pending` status
+- Admin processes withdrawals manually
+- Earnings are reserved (linked to transaction) but not marked as withdrawn until admin processes
+- Wallet balance is not deducted until admin processes the withdrawal
+
+### Earnings Endpoints Usage
+1. **Get Earnings Summary** - Quick overview of all earnings statistics
+2. **List Earnings** - Detailed list with filtering options:
+   - Filter by type: `investment_earning`, `referral_bonus`, or `all`
+   - Filter by withdrawal status: `isWithdrawn=true` or `isWithdrawn=false`
+   - Sort by: `date`, `amount`, or `withdrawableDate`
+   - Pagination: `page` and `pageSize`
+3. **Withdraw Earnings** - Request withdrawal (requires 30 days wait)
 
 Happy Testing! 🚀
