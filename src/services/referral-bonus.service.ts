@@ -84,6 +84,23 @@ export async function awardReferralBonus(
       return;
     }
 
+    // Idempotency: if a referral bonus was already created for this referred user, skip
+    const existingBonus = await Earning.exists({
+      type: "referral_bonus",
+      referredUserId: new mongoose.Types.ObjectId(referredUserId),
+    }).session(session);
+    if (existingBonus) {
+      return;
+    }
+
+    // Award only on the referred user's first investment
+    // Since this runs right after creating an investment, the first-investment case
+    // is when the total count of investments for the user is exactly 1
+    const investmentCount = await Investment.countDocuments({ userId: referredUserId }).session(session);
+    if (investmentCount !== 1) {
+      return;
+    }
+
     const referrerId = String(referral.referrerId);
 
     // Get the referrer's tier

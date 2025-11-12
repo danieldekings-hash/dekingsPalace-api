@@ -1,6 +1,7 @@
 import { Investment } from "../models/Investment.model";
 import { Transaction } from "../models/Transaction.model";
 import { User } from "../models/User.model";
+import { Referral } from "../models/Referral.model";
 import { Wallet } from "../models/Wallet.model";
 import { v4 as uuid } from "uuid";
 import mongoose from "mongoose";
@@ -138,9 +139,31 @@ export const createInvestment = async ({
       { session }
     );
 
+    // Ensure referral relationship exists if the user registered with a referral code
+    try {
+      if (user.referredBy) {
+        const existingRel = await Referral.findOne({ referredId: user._id }).session(session);
+        if (!existingRel) {
+          const referrer = await User.findOne({ referralCode: user.referredBy }).session(session);
+          if (referrer) {
+            await Referral.create([
+              {
+                referrerId: referrer._id,
+                referredId: user._id,
+                referralCode: referrer.referralCode,
+                status: "active",
+              },
+            ], { session });
+          }
+        }
+      }
+    } catch (e) {
+      // ignore linking errors (e.g., duplicates)
+    }
+
     // Award referral bonus if user was referred
     await awardReferralBonus(
-      userId,
+      String(userId),
       investmentId,
       amount,
       plan.toLowerCase(),

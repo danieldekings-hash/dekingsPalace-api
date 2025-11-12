@@ -3,6 +3,8 @@ import { Wallet } from "../models/Wallet.model";
 import { Transaction } from "../models/Transaction.model";
 import mongoose from "mongoose";
 import { v4 as uuid } from "uuid";
+import { Investment } from "../models/Investment.model";
+import { getPlanConfig } from "../constants/investment.plans";
 
 export interface EarningsListQuery {
   type?: "investment_earning" | "referral_bonus" | "all";
@@ -13,6 +15,150 @@ export interface EarningsListQuery {
   sortOrder?: "asc" | "desc";
 }
 
+// Cron-friendly: upsert investment earnings for ALL users for a specific UTC day
+export async function runDailyInvestmentEarningsJob(targetDate?: Date) {
+  const base = targetDate ? new Date(targetDate) : new Date();
+  const dayStart = startOfUTC(base);
+  const dayEnd = addDaysUTC(dayStart, 1);
+
+  const investments = await Investment.find({
+    status: { $in: ["active", "pending"] },
+    startDate: { $lt: dayEnd },
+    endDate: { $gt: dayStart },
+  }).select(["_id", "userId", "plan", "amount"]).lean();
+
+  for (const inv of investments as any[]) {
+    const cfg = getPlanConfig(inv.plan);
+    const pct = cfg?.returnPercentage ?? 0;
+    const dailyAmount = (inv.amount * (pct / 100)) / 30;
+    const withdrawableDate = addDaysUTC(dayStart, 30);
+
+    await Earning.updateOne(
+      {
+        userId: new mongoose.Types.ObjectId(inv.userId),
+        investmentId: inv._id,
+        type: "investment_earning",
+        date: dayStart,
+      },
+      {
+        $setOnInsert: {
+          amount: dailyAmount,
+          withdrawableDate,
+          isWithdrawn: false,
+        },
+      },
+      { upsert: true }
+    );
+  }
+}
+
+// Utilities for UTC date boundaries
+function startOfUTC(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function addDaysUTC(date: Date, days: number) {
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+// Idempotent upsert of per-day investment earnings between [start, end]
+async function upsertInvestmentDailyEarningsForRange(userId: string, start: Date, end: Date) {
+  const userIdObj = new mongoose.Types.ObjectId(userId);
+  let day = new Date(start);
+  while (day <= end) {
+    const dayStart = startOfUTC(day);
+    const dayEnd = addDaysUTC(dayStart, 1);
+    const investments = await Investment.find({
+      userId: userIdObj,
+      status: { $in: ["active", "pending"] },
+      startDate: { $lt: dayEnd },
+      endDate: { $gt: dayStart },
+    }).lean();
+
+    for (const inv of investments as any[]) {
+      const cfg = getPlanConfig(inv.plan);
+      const pct = cfg?.returnPercentage ?? 0;
+      const dailyAmount = (inv.amount * (pct / 100)) / 30;
+      const withdrawableDate = addDaysUTC(dayStart, 30);
+
+      await Earning.updateOne(
+        {
+          userId: userIdObj,
+          investmentId: inv._id,
+          type: "investment_earning",
+          date: dayStart,
+        },
+        {
+          $setOnInsert: {
+            amount: dailyAmount,
+            withdrawableDate,
+            isWithdrawn: false,
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    day = addDaysUTC(day, 1);
+  }
+}
+
+// Returns today's split (UTC) and triggers upsert for investment daily earnings
+export async function getTodayIncome(userId: string) {
+  const today = startOfUTC(new Date());
+  await upsertInvestmentDailyEarningsForRange(userId, today, today);
+  const userIdObj = new mongoose.Types.ObjectId(userId);
+  const tomorrow = addDaysUTC(today, 1);
+  const agg = await Earning.aggregate([
+    { $match: { userId: userIdObj, date: { $gte: today, $lt: tomorrow } } },
+    { $group: { _id: "$type", total: { $sum: "$amount" } } },
+  ]);
+  let investment = 0;
+  let referral = 0;
+  for (const a of agg) {
+    if (a._id === "investment_earning") investment = a.total;
+    if (a._id === "referral_bonus") referral = a.total;
+  }
+  const total = investment + referral;
+  return { date: today, investment, referral, total };
+}
+
+// Returns per-day breakdown between optional start/end (inclusive), UTC
+export async function getDailyBreakdown(userId: string, start?: string, end?: string) {
+  const baseStart = start ? startOfUTC(new Date(start)) : startOfUTC(new Date());
+  const baseEnd = end ? startOfUTC(new Date(end)) : baseStart;
+  await upsertInvestmentDailyEarningsForRange(userId, baseStart, baseEnd);
+
+  const userIdObj = new mongoose.Types.ObjectId(userId);
+  const endExclusive = addDaysUTC(baseEnd, 1);
+  const rows = await Earning.aggregate([
+    { $match: { userId: userIdObj, date: { $gte: baseStart, $lt: endExclusive } } },
+    { $group: { _id: { date: "$date", type: "$type" }, total: { $sum: "$amount" } } },
+  ]);
+
+  // Build map date -> { investment, referral }
+  const map = new Map<string, { investment: number; referral: number }>();
+  for (const r of rows) {
+    const key = new Date(r._id.date).toISOString();
+    const entry = map.get(key) || { investment: 0, referral: 0 };
+    if (r._id.type === "investment_earning") entry.investment += r.total;
+    if (r._id.type === "referral_bonus") entry.referral += r.total;
+    map.set(key, entry);
+  }
+
+  const days: Array<{ date: string; investment: number; referral: number; total: number }> = [];
+  let cursor = new Date(baseStart);
+  while (cursor <= baseEnd) {
+    const d = startOfUTC(cursor).toISOString();
+    const entry = map.get(d) || { investment: 0, referral: 0 };
+    days.push({ date: d, investment: entry.investment, referral: entry.referral, total: entry.investment + entry.referral });
+    cursor = addDaysUTC(cursor, 1);
+  }
+
+  return { start: baseStart, end: baseEnd, days };
+}
 export interface EarningsSummary {
   totalEarnings: number;
   totalWithdrawn: number;
@@ -225,7 +371,6 @@ export async function withdrawEarnings(
       .session(session);
 
     if (withdrawableEarnings.length === 0) {
-      await session.abortTransaction();
       const err: any = new Error("No earnings available for withdrawal. Earnings can only be withdrawn after complete 30 days from the earning date.");
       err.code = "NO_WITHDRAWABLE_EARNINGS";
       throw err;
@@ -266,14 +411,12 @@ export async function withdrawEarnings(
 
     // Calculate total available (excluding reserved earnings)
     const totalAvailable = withdrawableEarnings.reduce((sum, e) => {
-      // Check if this earning is reserved
-      const isReserved = e.withdrawalTransactionId && 
-        withdrawableEarnings.some(ew => String(ew._id) === String(e._id));
+      // Exclude earnings already linked to a pending/processing withdrawal transaction
+      const isReserved = !!e.withdrawalTransactionId;
       return isReserved ? sum : sum + e.amount;
-    }, 0) - reservedAmount;
+    }, 0);
 
     if (amount > totalAvailable) {
-      await session.abortTransaction();
       const err: any = new Error(
         `Insufficient withdrawable earnings. Available: ${totalAvailable.toFixed(2)}, Requested: ${amount.toFixed(2)}. Note: Earnings can only be withdrawn after complete 30 days from the earning date.`
       );

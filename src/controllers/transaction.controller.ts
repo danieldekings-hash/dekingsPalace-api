@@ -34,4 +34,35 @@ export async function exportCSV(req: Request, res: Response) {
   res.send(csv);
 }
 
+export async function confirmWithdrawal(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const { txHash } = req.body as { txHash?: string };
+    const result = await service.confirmWithdrawalTransaction(id, { txHash });
+    res.json(ok(result, "Withdrawal confirmed"));
+  } catch (error: any) {
+    res.status(400).json(fail("WITHDRAWAL_CONFIRM_ERROR", error.message || "Failed to confirm withdrawal"));
+  }
+}
+
+export async function failWithdrawal(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const result = await service.failWithdrawalTransaction(id, req.body as any);
+    res.json(ok(result, "Withdrawal failed and earnings released"));
+  } catch (error: any) {
+    res.status(400).json(fail("WITHDRAWAL_FAIL_ERROR", error.message || "Failed to fail withdrawal"));
+  }
+}
+
+export async function adminListWithdrawals(req: Request, res: Response) {
+  try {
+    const { status, page, limit } = req.query as any;
+    const result = await service.listAllWithdrawals({ status, page: Number(page) || 1, limit: Number(limit) || 20 });
+    res.json(ok(result));
+  } catch (error: any) {
+    res.status(500).json(fail("INTERNAL_ERROR", error.message || "Failed to list withdrawals"));
+  }
+}
+
 
