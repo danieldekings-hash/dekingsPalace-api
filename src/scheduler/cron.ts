@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { runDailyInvestmentEarningsJob } from "../services/earning.service";
+import { checkAllWalletDeposits } from "../services/wallet-tracking.service";
 
 // Schedule: 00:05 UTC every day
 // Cron expression fields: minute hour day-of-month month day-of-week
@@ -7,6 +8,7 @@ import { runDailyInvestmentEarningsJob } from "../services/earning.service";
 // a timezone option like { timezone: 'UTC' } below.
 
 export function initSchedulers() {
+  // Daily investment earnings job at 00:05 UTC
   cron.schedule("5 0 * * *", async () => {
     try {
       await runDailyInvestmentEarningsJob();
@@ -17,4 +19,19 @@ export function initSchedulers() {
       console.error("[cron] Daily investment earnings upsert failed", err);
     }
   }, { timezone: "UTC" });
+
+  // Wallet tracking: Check for deposits every 30 seconds
+  // Reduced from 10 seconds to avoid hitting free API rate limits
+  // Using setInterval for sub-minute intervals
+  setInterval(async () => {
+    try {
+      await checkAllWalletDeposits();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[cron] Wallet tracking check failed", err);
+    }
+  }, 30000); // 30 seconds = 30000 milliseconds (reduced frequency to avoid rate limits)
+
+  // eslint-disable-next-line no-console
+  console.log("[cron] Wallet tracking initialized (checking every 30 seconds)");
 }

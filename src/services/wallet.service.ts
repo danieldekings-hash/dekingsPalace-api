@@ -2,6 +2,8 @@ import { Wallet, IWallet } from "../models/Wallet.model";
 import { Transaction } from "../models/Transaction.model";
 import { v4 as uuid } from "uuid";
 import mongoose from "mongoose";
+import { WalletTx } from "../models/WalletTx.model";
+import { TRACKED_WALLETS, TrackedWalletKey } from "../constants/wallets";
 
 export async function getWallet(userId: string) {
   let wallet = await Wallet.findOne({ userId }).lean();
@@ -124,4 +126,63 @@ export async function createWithdrawal(userId: string, amount: number, currency:
   } finally {
     session.endSession();
   }
+}
+
+export async function getTrackedDepositsSummary(limit = 25) {
+  const totals = await WalletTx.aggregate([
+    {
+      $group: {
+        _id: "$network",
+        totalAmount: { $sum: "$amount" },
+        txCount: { $sum: 1 },
+        lastDepositAt: { $max: "$timestamp" },
+      },
+    },
+  ]);
+
+  const totalsMap = totals.reduce<Record<string, { totalAmount: number; txCount: number; lastDepositAt: Date | null }>>(
+    (acc, curr) => {
+      acc[curr._id] = {
+        totalAmount: curr.totalAmount,
+        txCount: curr.txCount,
+        lastDepositAt: curr.lastDepositAt || null,
+      };
+      return acc;
+    },
+    {}
+  );
+
+  const wallets = (Object.keys(TRACKED_WALLETS) as TrackedWalletKey[]).map((key) => {
+    const meta = TRACKED_WALLETS[key];
+    const stats = totalsMap[key] || { totalAmount: 0, txCount: 0, lastDepositAt: null };
+    return {
+      network: meta.network,
+      label: meta.label,
+      address: meta.address,
+      contract: "contract" in meta ? meta.contract : undefined,
+      mint: "mint" in meta ? meta.mint : undefined,
+      totalAmount: stats.totalAmount,
+      txCount: stats.txCount,
+      lastDepositAt: stats.lastDepositAt,
+    };
+  });
+
+  const recentTransactions = await WalletTx.find({})
+    .sort({ timestamp: -1 })
+    .limit(limit)
+    .lean();
+
+  return {
+    wallets,
+    recentTransactions: recentTransactions.map((tx) => ({
+      id: tx._id,
+      hash: tx.hash,
+      network: tx.network,
+      amount: tx.amount,
+      from: tx.from,
+      to: tx.to,
+      timestamp: tx.timestamp,
+      recordedAt: tx.createdAt,
+    })),
+  };
 }

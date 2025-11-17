@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.get("/", authenticate, controller.getWallet);
 router.get("/addresses", authenticate, controller.getAddresses);
+router.get("/tracking/deposits", authenticate, controller.getTrackedDepositsSummary);
+router.get("/tracking/deposits/public", controller.getPublicTrackedDepositsSummary);
 router.post("/deposit", authenticate, validateBody(depositSchema), controller.deposit);
 router.post("/withdraw", authenticate, validateBody(withdrawSchema), controller.withdraw);
 

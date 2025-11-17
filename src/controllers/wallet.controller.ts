@@ -35,3 +35,21 @@ export async function withdraw(req: Request, res: Response) {
   }
 }
 
+function resolveLimitParam(req: Request) {
+  const limitParam = Number(req.query.limit);
+  if (Number.isFinite(limitParam)) {
+    return Math.min(Math.max(Math.floor(limitParam), 1), 100);
+  }
+  return 25;
+}
+
+export async function getTrackedDepositsSummary(req: Request, res: Response) {
+  const summary = await walletService.getTrackedDepositsSummary(resolveLimitParam(req));
+  res.json(ok(summary));
+}
+
+export async function getPublicTrackedDepositsSummary(req: Request, res: Response) {
+  const summary = await walletService.getTrackedDepositsSummary(resolveLimitParam(req));
+  res.json(ok(summary));
+}
+

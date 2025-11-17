@@ -18,6 +18,8 @@
    - `JWT_SECRET` - A strong secret key (generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
    - `PUBLIC_WALLET` - Your cryptocurrency wallet address
    - `PORT` - Server port (default: 5500)
+   - `BSCSCAN_API_KEY` - (Optional) BscScan API key for BEP20 USDT tracking. Get one at https://bscscan.com/apis
+   - `SOLANA_RPC_URL` - (Optional) Custom Solana RPC endpoint. Defaults to public mainnet endpoint (no API key required)
 
 4. **Start development server**
    ```bash
