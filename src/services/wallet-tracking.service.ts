@@ -1,14 +1,8 @@
 import axios from "axios";
 import { WalletTx } from "../models/WalletTx.model";
+import { TRACKED_WALLETS } from "../constants/wallets";
 
-// Wallet addresses to monitor
-const BEP20_ADDRESS = "0x5abee42c0ac408c15e70e5510e031c96b6d76a87";
-const BEP20_CONTRACT = "0x55d398326f99059ff775485246999027b3197955";
-
-const TRC20_ADDRESS = "TMG5F5YTYShrMCZnZkDpGY2LhJwdHVwMMK";
-
-const SOLANA_ADDRESS = "7tn5v3dpUNKQepgoeuaWuexQSzhwkzaTEjiMzJnXUFay";
-const SOLANA_USDT_MINT = "Es9vMFrzaCER9dEj7tn5MDuBiwGvNAd8kH1EMwMGL67y";
+const { bep20, tron, solana } = TRACKED_WALLETS;
 
 /**
  * Check for new USDT deposits on BEP20 (BSC Network)
@@ -23,7 +17,7 @@ export async function checkBep20Deposits() {
 
     // Try Etherscan API V2 (unified endpoint) first
     // BSC chainid = 56
-    let url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${BEP20_CONTRACT}&address=${BEP20_ADDRESS}&sort=desc&apikey=${apiKey}`;
+    let url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${bep20.contract}&address=${bep20.address}&sort=desc&apikey=${apiKey}`;
     
     let response;
     let data;
@@ -34,14 +28,14 @@ export async function checkBep20Deposits() {
     } catch (error: any) {
       // If unified endpoint fails, try BSCScan-specific V2 endpoint
       if (error.response?.status === 404) {
-        url = `https://api.bscscan.com/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${BEP20_CONTRACT}&address=${BEP20_ADDRESS}&sort=desc&apikey=${apiKey}`;
+        url = `https://api.bscscan.com/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${bep20.contract}&address=${bep20.address}&sort=desc&apikey=${apiKey}`;
         try {
           response = await axios.get(url);
           data = response.data;
         } catch (fallbackError: any) {
           // If both V2 endpoints fail, fall back to V1 (might still work temporarily)
           console.warn("[Wallet Tracking] BEP20: V2 endpoints failed, trying V1 as fallback...");
-          url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${BEP20_CONTRACT}&address=${BEP20_ADDRESS}&sort=desc&apikey=${apiKey}`;
+          url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${bep20.contract}&address=${bep20.address}&sort=desc&apikey=${apiKey}`;
           response = await axios.get(url);
           data = response.data;
         }
@@ -108,7 +102,7 @@ export async function checkBep20Deposits() {
 
     for (const tx of txs) {
       // Only process incoming transactions
-      if (tx.to?.toLowerCase() === BEP20_ADDRESS.toLowerCase()) {
+      if (tx.to?.toLowerCase() === bep20.address.toLowerCase()) {
         const exists = await WalletTx.findOne({ hash: tx.hash });
         if (!exists) {
           const amount = parseFloat(tx.value) / 1e18; // USDT has 18 decimals on BEP20
@@ -137,10 +131,10 @@ export async function checkBep20Deposits() {
 export async function checkTrc20Deposits() {
   try {
     // USDT contract address on TRON (TRC20)
-    const USDT_TRC20_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    const USDT_TRC20_CONTRACT = tron.contract;
     
     // Try TronGrid API (official TRON API) - no API key needed for basic queries
-    const url = `https://api.trongrid.io/v1/accounts/${TRC20_ADDRESS}/transactions/trc20?limit=50&only_confirmed=true&contract_address=${USDT_TRC20_CONTRACT}`;
+    const url = `https://api.trongrid.io/v1/accounts/${tron.address}/transactions/trc20?limit=50&only_confirmed=true&contract_address=${USDT_TRC20_CONTRACT}`;
 
     let response;
     let data;
@@ -160,7 +154,7 @@ export async function checkTrc20Deposits() {
         const rpcResponse = await axios.post(
           `${rpcUrl}/wallet/triggerconstantcontract`,
           {
-            owner_address: TRC20_ADDRESS,
+            owner_address: tron.address,
             contract_address: USDT_TRC20_CONTRACT,
             function_selector: "balanceOf(address)",
             parameter: "",
@@ -176,7 +170,7 @@ export async function checkTrc20Deposits() {
         console.warn("[Wallet Tracking] TRC20: TronGrid failed, trying TronScan...");
         
         // Try TronScan public API (no key needed)
-        const tronscanUrl = `https://apilist.tronscanapi.com/api/transfer/trc20?limit=50&start=0&sort=-timestamp&toAddress=${TRC20_ADDRESS}`;
+        const tronscanUrl = `https://apilist.tronscanapi.com/api/transfer/trc20?limit=50&start=0&sort=-timestamp&toAddress=${tron.address}`;
         const tronscanResponse = await axios.get(tronscanUrl, {
           timeout: 15000,
           headers: { "Accept": "application/json" },
@@ -212,7 +206,7 @@ export async function checkTrc20Deposits() {
       const timestamp = tx.block_timestamp || tx.block_timestamp_ms || tx.timestamp;
 
       // Only process incoming transactions
-      if (toAddress && toAddress.toLowerCase() === TRC20_ADDRESS.toLowerCase()) {
+      if (toAddress && toAddress.toLowerCase() === tron.address.toLowerCase()) {
         const exists = await WalletTx.findOne({ hash: txHash });
         if (!exists && amount) {
           const usdtAmount = parseFloat(amount) / 1e6; // USDT has 6 decimals on TRC20
@@ -250,7 +244,7 @@ export async function checkSolanaDeposits() {
       id: 1,
       method: "getSignaturesForAddress",
       params: [
-        SOLANA_ADDRESS,
+        solana.address,
         { limit: 50 }
       ],
     }, {
@@ -282,8 +276,8 @@ export async function checkSolanaDeposits() {
               if (instruction.parsed?.type === "transfer" || instruction.parsed?.type === "transferChecked") {
                 const info = instruction.parsed?.info;
                 if (
-                  info?.destination === SOLANA_ADDRESS &&
-                  info?.mint === SOLANA_USDT_MINT
+                  info?.destination === solana.address &&
+                  info?.mint === solana.mint
                 ) {
                   const amount = parseFloat(info.tokenAmount?.uiAmount || info.amount || 0) / 1e6;
                   if (amount > 0) {
@@ -292,7 +286,7 @@ export async function checkSolanaDeposits() {
                       network: "solana",
                       amount,
                       from: info.authority || info.source || "unknown",
-                      to: SOLANA_ADDRESS,
+                      to: solana.address,
                       timestamp: new Date(sigInfo.blockTime * 1000),
                     });
                     console.log(

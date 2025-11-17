@@ -679,6 +679,68 @@
 			"item": [
 				{"name": "Get Wallet", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/wallet", "host": ["{{base_url}}"], "path": ["api","wallet"]}}, "response": []},
 				{"name": "Get Addresses", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "url": {"raw": "{{base_url}}/api/wallet/addresses", "host": ["{{base_url}}"], "path": ["api","wallet","addresses"]}}, "response": []},
+				{
+					"name": "Get Tracked Deposits (Auth)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/wallet/tracking/deposits?limit=25",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wallet",
+								"tracking",
+								"deposits"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "25",
+									"description": "Number of recent tx to include (1-100)"
+								}
+							]
+						},
+						"description": "Authenticated summary of on-chain deposits detected by the wallet tracker (BEP20, TRON, Solana). Returns totals per network and the latest tracked transactions."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tracked Deposits (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wallet/tracking/deposits/public?limit=25",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wallet",
+								"tracking",
+								"deposits",
+								"public"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "25",
+									"description": "Number of recent tx to include (1-100)"
+								}
+							]
+						},
+						"description": "Public endpoint exposing the same tracked deposit summary without authentication (read-only view for monitoring)."
+					},
+					"response": []
+				},
 				{"name": "Create Deposit", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 100,\n  \"currency\": \"USDT\"\n}"}, "url": {"raw": "{{base_url}}/api/wallet/deposit", "host": ["{{base_url}}"], "path": ["api","wallet","deposit"]}}, "response": []},
 				{"name": "Request Withdrawal", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"},{"key": "Authorization", "value": "Bearer {{auth_token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 50,\n  \"currency\": \"USDT\",\n  \"walletAddress\": \"USDT-ADDRESS\"\n}"}, "url": {"raw": "{{base_url}}/api/wallet/withdraw", "host": ["{{base_url}}"], "path": ["api","wallet","withdraw"]}}, "response": []}
 			],

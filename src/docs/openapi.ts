@@ -87,6 +87,21 @@ const openapi: any = {
     },
     "/api/wallet": { get: { tags: ["Wallet"], security: [{ bearerAuth: [] }], responses: { "200": { description: "OK" } } } },
     "/api/wallet/addresses": { get: { tags: ["Wallet"], security: [{ bearerAuth: [] }], responses: { "200": { description: "OK" } } } },
+    "/api/wallet/tracking/deposits": { get: { tags: ["Wallet"], security: [{ bearerAuth: [] }], responses: { "200": { description: "OK" } } } },
+    "/api/wallet/tracking/deposits/public": {
+      get: {
+        tags: ["Wallet"],
+        responses: { "200": { description: "Wallet tracker summary (public)" } },
+        parameters: [
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+            description: "Number of recent transactions to return",
+          },
+        ],
+      },
+    },
     "/api/wallet/deposit": { post: { tags: ["Wallet"], security: [{ bearerAuth: [] }], responses: { "201": { description: "Created" } } } },
     "/api/wallet/withdraw": { post: { tags: ["Wallet"], security: [{ bearerAuth: [] }], responses: { "201": { description: "Requested" } } } },
     "/api/transactions": { get: { tags: ["Transactions"], security: [{ bearerAuth: [] }], responses: { "200": { description: "OK" } } } },
