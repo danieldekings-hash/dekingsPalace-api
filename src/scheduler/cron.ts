@@ -20,9 +20,8 @@ export function initSchedulers() {
     }
   }, { timezone: "UTC" });
 
-  // Wallet tracking: Check for deposits every 30 seconds
-  // Reduced from 10 seconds to avoid hitting free API rate limits
-  // Using setInterval for sub-minute intervals
+  // Wallet tracking: Check for deposits every 10 seconds
+  // Using setInterval for sub-minute intervals. Currently only TRON and Solana are tracked.
   setInterval(async () => {
     try {
       await checkAllWalletDeposits();
@@ -30,8 +29,8 @@ export function initSchedulers() {
       // eslint-disable-next-line no-console
       console.error("[cron] Wallet tracking check failed", err);
     }
-  }, 30000); // 30 seconds = 30000 milliseconds (reduced frequency to avoid rate limits)
+  }, 10000); // 10 seconds = 10000 milliseconds
 
   // eslint-disable-next-line no-console
-  console.log("[cron] Wallet tracking initialized (checking every 30 seconds)");
+  console.log("[cron] Wallet tracking initialized (checking every 10 seconds)");
 }
