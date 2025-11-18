@@ -313,7 +313,9 @@ export async function checkSolanaDeposits() {
  */
 export async function checkAllWalletDeposits() {
   await Promise.all([
-    checkBep20Deposits(),
+    // BSC/BEP20 tracking is currently disabled due to unreliable free API access.
+    // To re-enable in future, add checkBep20Deposits() back into this list.
+    // checkBep20Deposits(),
     checkTrc20Deposits(),
     checkSolanaDeposits(),
   ]);
